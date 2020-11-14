@@ -1,0 +1,116 @@
+version: "3"
+services:
+  redis:
+    image: redis:6.0.9-alpine
+    ports:
+      - 6379:6379
+    networks:
+      - voteapp-backend
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    env_file: .env
+    ports:
+      - 8081:8081
+    networks:
+      - voteapp-backend
+  
+  arena:
+    image: mixmaxhq/arena:latest
+    env_file: .env
+    ports:
+      - 4567:4567
+    networks:
+      - voteapp-backend
+    volumes:
+      - ./arena/index.json:/opt/arena/index.json
+
+  worker:
+    env_file: .env
+    build: ./worker
+    networks:
+      - voteapp-backend
+    volumes:
+      - ./worker/src:/app/src
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    env_file: .env
+    build: ./db
+    ports:
+      - 3306:3306
+    networks:
+      - voteapp-backend
+    volumes:
+      - voteapp-db:/var/lib/mysql
+
+  voteapp:
+    env_file: .env
+    build: ./vote
+    ports:
+      - ${VOTE_PORT}:${VOTE_PORT}
+    networks:
+      - voteapp-frontend
+      - voteapp-backend
+    volumes:
+      - ./vote/src:/app/src
+      - ./data:/app/data
+    depends_on:
+      - redis
+
+  auto-vote:
+    env_file: .env
+    build: ./auto-vote
+
+    volumes:
+      - ./auto-vote/src:/app/src
+      - ./data:/app/data
+
+    networks:
+      - voteapp-frontend
+    depends_on:
+      - voteapp
+
+  result:
+    env_file: .env
+    build: ./result
+
+    ports:
+      - ${RESULT_PORT}:${RESULT_PORT}
+
+    volumes:
+      - ./result/src:/app/src
+      - ./data:/app/data
+
+    networks:
+      - voteapp-backend
+      - voteapp-frontend
+
+    depends_on:
+      - mysql
+
+  ui:
+    env_file: .env
+    build: ./ui
+
+    ports:
+      - ${UI_PORT}:${UI_PORT}
+
+    volumes:
+      - ./ui/src:/app/src
+      - ./data:/app/data
+
+    networks:
+      - voteapp-backend
+      - voteapp-frontend
+    depends_on:
+      - result
+
+networks:
+  voteapp-frontend:
+  voteapp-backend:
+
+volumes:
+  voteapp-db:

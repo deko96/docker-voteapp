@@ -1,0 +1,10 @@
+{
+  "queues": [
+    {
+      "name": "vote",
+      "port": 6379,
+      "host": "redis",
+      "hostId": "[voteapp] Docker Redis"
+    }
+  ]
+}
